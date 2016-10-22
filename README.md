@@ -7,7 +7,6 @@
 - 将css/sass文件单独打包
 
 ## Vue
-- Vue 计算属性的一些坑
 - Vue-resource 与 Promise 的兼容性问题解决
 - Vue-resource 1.x 与 0.x 版本的差别
 - Vue-router 的一些坑
@@ -55,3 +54,41 @@ plugins: [
 这个方式的不足之处是, 由于这个v的值是时间戳, 而不是文件的hash值, 这样会导致在只打包部分文件时, 未更新的文件也将被浏览器强制下载, 缓存利用率会降低。
 
 ## Webpack - 将css/sass文件单独打包
+默认情况下webpack会将css内容打包到js文件中, 运行时会在页面动态创建style标签, 这样的问题在于css样式无法充分利用缓存, 并且也增加了js文件的体积。我们希望将css与js分开打包。那么就需要一个webpack插件——extract-text-webpack-plugin。
+在webpack.config.js中增加一个loaders配置:
+```javascript
+{
+    test: /\.scss$/,
+    loader: ExtractTextPlugin.extract("style-loader", "css-loader!sass-loader")
+}
+```
+这个配置将对所有出现
+```javascript
+require('/path-to/xxx.scss');
+```
+的地方将单独打包出css文件, 这样就可以在html中使用link标签加载了。可参考代码 src/main.js 与 main.html
+
+如果项目中没有用到sass而是普通css, 则就将上述配置改一下, 改成后缀为.css, 并去掉 sass-loader 即可。当然建议使用sass/less等css预处理器, 可以让css的开发更加便捷。
+
+## Vue-resource 与 Promise 的兼容性问题解决
+Vue-Resource内部自己做了一个Promise实现, 经查看源码得知, 如果检测到有全局的Promise存在则就使用全局的, 而不再使用自己实现的, 看上去没有问题。但最近遇到的一个棘手的问题, 在vue+webpack架构下, 使用安卓4.3的手机使用vue-resource发起http请求报错。无奈之下求助了知乎: https://www.zhihu.com/question/51718659
+
+最后的结论为: vue-resource内部的Promise实现经webpack打包后会有bug, 在不支持原生Promise的浏览器上将无法使用。经caniuse.com上查到, Android 4.4.2以下均不支持。
+
+最后的解决方案: 用另一个ES6-Promise的polyfill库(https://github.com/stefanpenner/es6-promise), 让旧的浏览器拥有Promise, 避开vue-resource自己的实现。感谢那位给出回答的知乎朋友。
+
+## Vue-resource 1.x 与 0.x 版本的差别
+```javascript
+this.$http.get(someUrl).then((resp) => {
+    var result = resp.json();
+});
+```
+上述代码, 在vue-resource 0.x版本下, result直接获取到了响应的json对象, 而在1.x版本上, result则又是一个Promise对象, 需要再次调用 then 才能获取结果。
+
+## Vue-router 的一些坑
+我们可以用 this.$route.path 获得当前路由路径, 不过他有一个坑, 会把当前URL中的查询参数一并携带着。如果程序中出现了对这个值进行判断的逻辑一定要注意, 如果只需要hash部分则需要截取一下。
+
+比如有个项目使用了vue-router, 页面访问地址为 http://www.example.com/?param=123 , 访问后自动进入index路由, 此时url变为 http://www.example.com/?param=123#!/index , 这个时候使用 this.$route.path 获取到的值不是 /index, 而是 /index?param=123。这个问题是在0.9版本上发现的, 最新的2.x版本尚未验证。
+
+## flex布局在低版本安卓下的兼容性
+flex弹性盒模型布局给前端开发带来了极大的方便, 但新技术总会有兼容性问题, 在Android 4.3下再次出现对 flex 布局兼容的问题。查询caniuse.com 得知, Flex布局在Android 4.3及以下只支持旧式语法, 对于直接接触新式语法的开发者当然不情愿再去编写旧语法来兼容低版本浏览器, 所以这一项工作可以交给sass做, sass会对代码中出现的display: flex等flex布局属性增加旧版盒模型的兼容。
