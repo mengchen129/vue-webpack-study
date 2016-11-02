@@ -8,18 +8,8 @@
     <title></title>
 </head>
 <body>
-<header>vue-webpack-study</header>
-
-<div id="app">
-    <p>你要购买那款产品:</p>
-    <ul>
-        <li v-for="goods in goodsList">
-            <div @click="selectGoods(goods)" class="goods-name" :class="{'selected': goods.selected}">{{goods.name}}</div>
-        </li>
-    </ul>
-    <p><input type="checkbox" v-model="atLeast1300">忽略1300元以下的</p>
-    <p>总价: {{totalPrice}}元</p>
-</div>
+<header>Header rendered by sass-loader</header>
+<v-header title="Header rendered by vue-loader"></v-header>
 
 <script src="/dist/main.js"></script>
 </body>

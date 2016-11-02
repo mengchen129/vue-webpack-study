@@ -5,6 +5,7 @@
 - 配置多入口文件打包
 - 打包文件的缓存管理
 - 将css/sass文件单独打包
+- sass-loader的坑
 
 ## Vue
 - Vue-resource 与 Promise 的兼容性问题解决
@@ -12,7 +13,7 @@
 - Vue-router 的一些坑
 
 ## 其他
-- flex布局在低版本安卓下的兼容性
+
 
 
 ## Webpack - 配置多入口文件打包
@@ -70,6 +71,15 @@ require('/path-to/xxx.scss');
 
 如果项目中没有用到sass而是普通css, 则就将上述配置改一下, 改成后缀为.css, 并去掉 sass-loader 即可。当然建议使用sass/less等css预处理器, 可以让css的开发更加便捷。
 
+## Webpack - sass-loader的坑
+flex弹性盒模型布局给前端开发带来了极大的方便, 但新技术总会有兼容性问题, 在Android 4.3下再次出现对 flex 布局兼容的问题。查询caniuse.com 得知, Flex布局在Android 4.3及以下只支持旧式语法, 对于直接接触新式语法的开发者当然不情愿再去编写旧语法来兼容低版本浏览器, 本来想打算将这一项工作交给sass做, 因为编写的vue组件最终编译的css代码中会对sass代码中出现的display: flex等flex布局属性增加旧版盒模型的兼容。
+
+本以为可以放心的在非vue组件内使用sass编写flex等样式了, 结果sass-loader却不对这些高级样式做兼容处理, 最终生成的css无法兼容低版安卓, 遇见了这个坑, 目前尚未发现解决办法, 只能手工增加兼容代码。
+
+附截图如下, 页面又两个header, 一个由普通sass-loader渲染, 一个由vue-loader渲染, 他们最终生成的css代码是不同的:
+![sass-loader](http://182.92.167.237/images/flex-sass-loader.png)
+![vue-loader](http://182.92.167.237/images/flex-vue-loader.png)
+
 ## Vue-resource 与 Promise 的兼容性问题解决
 Vue-Resource内部自己做了一个Promise实现, 经查看源码得知, 如果检测到有全局的Promise存在则就使用全局的, 而不再使用自己实现的, 看上去没有问题。但最近遇到的一个棘手的问题, 在vue+webpack架构下, 使用安卓4.3的手机使用vue-resource发起http请求报错。无奈之下求助了知乎: https://www.zhihu.com/question/51718659
 
@@ -89,6 +99,3 @@ this.$http.get(someUrl).then((resp) => {
 我们可以用 this.$route.path 获得当前路由路径, 不过他有一个坑, 会把当前URL中的查询参数一并携带着。如果程序中出现了对这个值进行判断的逻辑一定要注意, 如果只需要hash部分则需要截取一下。
 
 比如有个项目使用了vue-router, 页面访问地址为 http://www.example.com/?param=123 , 访问后自动进入index路由, 此时url变为 http://www.example.com/?param=123#!/index , 这个时候使用 this.$route.path 获取到的值不是 /index, 而是 /index?param=123。这个问题是在0.9版本上发现的, 最新的2.x版本尚未验证。
-
-## flex布局在低版本安卓下的兼容性
-flex弹性盒模型布局给前端开发带来了极大的方便, 但新技术总会有兼容性问题, 在Android 4.3下再次出现对 flex 布局兼容的问题。查询caniuse.com 得知, Flex布局在Android 4.3及以下只支持旧式语法, 对于直接接触新式语法的开发者当然不情愿再去编写旧语法来兼容低版本浏览器, 所以这一项工作可以交给sass做, sass会对代码中出现的display: flex等flex布局属性增加旧版盒模型的兼容。
