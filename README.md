@@ -1,5 +1,5 @@
 # vue-webpack-study
-整理vue+webpack的学习资料与开发过程中遇到的问题
+整理在学习与工作中遇到的vue + webpack的相关经验和问题
 
 ## 目录
 ### Webpack
@@ -11,6 +11,7 @@
 ### Vue
 - Vue-resource 与 Promise 的兼容性问题解决
 - Vue-resource 1.x 与 0.x 版本的差别
+- Vue-resource 拦截器的最佳实践
 - Vue-router 的一些坑
 - Vue ready钩子的注意点
 
@@ -96,6 +97,49 @@ this.$http.get(someUrl).then((resp) => {
 });
 ```
 上述代码, 在vue-resource 0.x版本下, result直接获取到了响应的json对象, 而在1.x版本上, result则又是一个Promise对象, 需要再次调用 then 才能获取结果。
+
+### Vue-resource 拦截器的最佳实践
+在开发中经常会编写大量的ajax请求, 而对于一个项目来说, 响应的json格式和公共处理逻辑都是一致的, 比如先判断code==0, 公共的error回调处理, 加载开始和完成的进度提示等等。这些通用操作可以放在拦截器里做统一处理。
+下面是我在项目中编写的一个通用的处理逻辑:
+```javascript
+/**
+ * Vue-resource 全局拦截器
+ */
+Vue.http.interceptors.push(function(request, next) {
+    // 请求开始前设置加载状态, 此时this指向当前vue实例
+    this.loading = true;            // 使用于Get请求
+    this.submitting = true;         // 适用于Post请求
+
+    next(function(resp) {
+        this.loading = false;       // 请求完成后置回加载状态
+        this.submitting = false;
+
+        if (!resp.ok) {             // 将error回调提前到这里执行
+            this.alert('服务器异常');    // 这里this.alert将弹出一个自己封装的提示框组件
+            return;
+        }
+
+        var result = resp.json();
+        resp.jsonData = result;     // 将json数据缓存, 因为每次调用 resp.json() 都会进行JSON.parse一次
+        if (result.code != 0) {
+            this.alert(result.msg);
+            resp.abort = true;      // 设置abort, 当进入响应主逻辑时不再处理
+            return;
+        }
+
+        return resp;
+    });
+});
+```
+然后在具体的ajax请求的响应里编写这两行代码即可:
+```javascript
+this.$http.get(SOME_URL).then((resp) => {
+    if (resp.abort) return;
+    var result = resp.jsonData;
+
+    // 对result做处理
+});
+```
 
 ### Vue-router 的一些坑
 我们可以用 this.$route.path 获得当前路由路径, 不过他有一个坑, 会把当前URL中的查询参数一并携带着。如果程序中出现了对这个值进行判断的逻辑一定要注意, 如果只需要hash部分则需要截取一下。
