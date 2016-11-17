@@ -120,16 +120,21 @@ this.$http.get(someUrl).then((resp) => {
  * Vue-resource 全局拦截器
  */
 Vue.http.interceptors.push(function(request, next) {
-    // 请求开始前设置加载状态, 此时this指向当前vue实例
+    // 请求开始前设置加载状态 loading/submitting
     var method = request.method.toUpperCase(),
         isGet = (method === 'GET'),
         isPost = (method === 'POST');
-    isGet && (this.loading = true);            // 使用于Get请求
-    isPost && (this.submitting = true);         // 适用于Post请求
-
+    
+    // 通过this.$http方式调用,在这里this与外部this保持一致指向当前vue实例; 如果通过Vue.http方式调用, 则this则指向执行环境上下文可能为空, 这里需要判断一下
+    if (this) {
+        isGet && (this.loading = true);            // 使用于Get请求
+        isPost && (this.submitting = true);         // 适用于Post请求
+    }
     next(function(resp) {
-        isGet && (this.loading = false);       // 请求完成后置回加载状态
-        isPost && (this.submitting = false);
+        if (this) {                                 // 请求完成后置回加载状态
+            isGet && (this.loading = false);       
+            isPost && (this.submitting = false);
+        }
 
         if (!resp.ok) {             // 将error回调提前到这里执行
             this.alert('服务器异常');    // 这里this.alert将弹出一个自己封装的提示框组件
