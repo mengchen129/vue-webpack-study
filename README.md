@@ -121,12 +121,15 @@ this.$http.get(someUrl).then((resp) => {
  */
 Vue.http.interceptors.push(function(request, next) {
     // 请求开始前设置加载状态, 此时this指向当前vue实例
-    this.loading = true;            // 使用于Get请求
-    this.submitting = true;         // 适用于Post请求
+    var method = request.method.toUpperCase(),
+        isGet = (method === 'GET'),
+        isPost = (method === 'POST');
+    isGet && (this.loading = true);            // 使用于Get请求
+    isPost && (this.submitting = true);         // 适用于Post请求
 
     next(function(resp) {
-        this.loading = false;       // 请求完成后置回加载状态
-        this.submitting = false;
+        isGet && (this.loading = false);       // 请求完成后置回加载状态
+        isPost && (this.submitting = false);
 
         if (!resp.ok) {             // 将error回调提前到这里执行
             this.alert('服务器异常');    // 这里this.alert将弹出一个自己封装的提示框组件
