@@ -137,7 +137,11 @@ Vue.http.interceptors.push(function(request, next) {
         }
 
         if (!resp.ok) {             // 将error回调提前到这里执行
-            this.alert('服务器异常');    // 这里this.alert将弹出一个自己封装的提示框组件
+            if (this && this.alert) {
+                this.alert('服务器异常');    // 这里this.alert将弹出一个自己封装的提示框组件
+            } else {
+                alert('服务器异常');
+            }
             return;
         }
 
@@ -170,7 +174,7 @@ this.$http.get(SOME_URL).then((resp) => {
 
 ### Vue ready钩子的注意点
 Vue实例的ready钩子函数的执行是在new Vue()的过程中进行的, 而不是等到new完之后的某一时刻才执行, 因此 ready函数比 new Vue() 之后的代码执行的早。比如下面的例子:
-```
+```javascript
 new Vue({
         el: 'body',
         ready: function() {
