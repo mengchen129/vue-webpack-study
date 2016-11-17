@@ -81,7 +81,7 @@ plugins: [
 ```javascript
 require('/path-to/xxx.scss');
 ```
-的地方将单独打包出css文件, 与js文件存放在相同目录, 这样就可以在html中使用link标签加载了, 同时在dev模式下, css文件的变动可以出发热替换, 非常方便。
+的地方将单独打包出css文件, 与js文件存放在相同目录, 这样就可以在html中使用link标签加载了, 同时在dev模式下, css文件的变动可以触发热替换, 非常方便。
 
 如果项目中没有用到sass而是普通css, 则就将上述配置改一下, 改成后缀为.css, 并去掉 sass-loader 即可。当然建议使用sass/less等css预处理器, 可以让css的开发更加便捷。
 
@@ -148,7 +148,11 @@ Vue.http.interceptors.push(function(request, next) {
         var result = resp.json();
         resp.jsonData = result;     // 将json数据缓存, 因为每次调用 resp.json() 都会进行JSON.parse一次
         if (result.code != 0) {
-            this.alert(result.msg);
+            if (this && this.alert) {
+                this.alert(result.msg);
+            } else {
+                alert(result.msg);
+            }
             resp.abort = true;      // 设置abort, 当进入响应主逻辑时不再处理
             return;
         }
